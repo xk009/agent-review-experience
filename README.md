@@ -6,7 +6,33 @@
 
 完整调研：[docs/research-report.md](docs/research-report.md)（另有单文件 HTML 版 [docs/research-report.html](docs/research-report.html)，clone 后用浏览器打开）。
 
-## 目录结构
+## 审阅闭环：本次新增的轻量入口
+
+**先让输出便于判断，再按需收集证据、预审和生成阅读视图。** 不要求先替换终端主题或启用全部 Hook。
+
+| 资产 | 用途 |
+| --- | --- |
+| [Review First 规则](claude/rules/review-first.md) | 常驻：结果、变化、优先审阅、验证缺口 |
+| [Review Package Skill](claude/skills/review-package/SKILL.md) | 按需：范围 → 真实变化 → 版本与证据 → 交付包 |
+| [只读预审 Agent](claude/agents/review-auditor.md) | 只允许读取与搜索；独立预审，不自动改代码 |
+| [审阅模板](claude/skills/review-package/templates.md) | 代码 / 文档 / 分析，包含增量与证据过期处理 |
+| [四组可复制提示词](prompts/review-workflow.md) | 交付包、独立预审、增量审阅、跨栈业务规则 |
+| [安装与使用](docs/review-workflow.md) | 官方依据、能力边界、与已有配置的关系 |
+| [一周试用](docs/review-pilot.md) | 检查是否减少人工时间、找证据与返工 |
+| [产物归档约定](docs/asset-conventions.md) | 本主题产物统一入库，保留公开发布边界 |
+
+在仓库根目录先预览，再确认安装：
+
+```bash
+python3 scripts/install-review-kit.py
+python3 scripts/install-review-kit.py --apply
+```
+
+安装器仅处理四个审阅资产文件，不改 settings、权限、终端配置或已有 CLAUDE.md；同名不同内容默认拒绝，显式替换会备份。根目录 [CLAUDE.md](CLAUDE.md) 是本仓库维护约定，不是用户全局配置。
+
+验证：安装器 8 项临时目录测试通过；Claude Code 实际运行、终端效果和真实提效仍待试用。详见 [验证边界](docs/review-workflow.md#验证状态与试用)。
+
+## 原有调研与配置目录
 
 ```
 .

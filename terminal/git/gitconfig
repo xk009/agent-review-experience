@@ -1,0 +1,15 @@
+# ~/.gitconfig —— 你自己看 git diff / lazygit 时用
+# 注意：Claude Code 自己的 diff 渲染走主题 token（见 claude/themes/review.json），不走 delta
+[core]
+    pager = delta
+[interactive]
+    diffFilter = delta --color-only
+[delta]
+    navigate = true
+    side-by-side = true
+    line-numbers = true
+[merge]
+    conflictstyle = zdiff3
+[alias]
+    # 语法感知 diff：只看语义变化，忽略格式化噪音
+    dft = -c diff.external=difft diff

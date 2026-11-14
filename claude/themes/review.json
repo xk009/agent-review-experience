@@ -1,0 +1,11 @@
+{
+  "name": "Review",
+  "base": "dark-daltonized",
+  "overrides": {
+    "diffAdded": "#12361f",
+    "diffRemoved": "#3d1418",
+    "diffAddedWord": "#1f6b3a",
+    "diffRemovedWord": "#8a2530",
+    "userMessageBackground": "#1d2333"
+  }
+}

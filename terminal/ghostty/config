@@ -1,0 +1,13 @@
+# ~/.config/ghostty/config
+font-family = "Maple Mono NF CN"
+font-size = 15
+adjust-cell-height = 15%
+# 不喜欢连字就打开下一行
+# font-feature = -calt
+
+# 跟随系统亮/暗色；主题名用 ghostty +list-themes 核对（未实测）
+theme = light:Catppuccin Latte,dark:Catppuccin Mocha
+
+window-padding-x = 12
+window-padding-y = 8
+macos-option-as-alt = true

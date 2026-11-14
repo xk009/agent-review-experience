@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claude Code Review 提效调研</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#57606a;--line:#d8dee4;--card:#ffffff;--accent:#0969da;
+--accent-bg:#ddf4ff;--warn-bg:#fff8c5;--code-bg:#f2f1ee;--th:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--fg:#e6edf3;--muted:#9da7b3;--line:#30363d;
+--card:#161b22;--accent:#58a6ff;--accent-bg:#132a44;--warn-bg:#3a2f0b;--code-bg:#1f242c;--th:#1c2128}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.layout{display:grid;grid-template-columns:260px minmax(0,860px);gap:40px;justify-content:center;padding:32px 24px}
+nav.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+nav.toc ul{list-style:none;padding-left:12px;margin:4px 0}nav.toc>div>ul{padding-left:0}
+nav.toc a{color:var(--muted);text-decoration:none}nav.toc a:hover{color:var(--accent)}
+main h1{font-size:28px;line-height:1.3;margin-top:0}
+main h2{margin-top:48px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+main h3{margin-top:32px}
+a{color:var(--accent)}
+blockquote{margin:16px 0;padding:12px 16px;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:8px}
+blockquote p{margin:4px 0}
+main>p:first-of-type+ol,#核心结论+p{background:var(--card)}
+#核心结论 + p{padding:14px 18px;border:2px solid var(--accent);border-radius:10px}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--th)}
+code{font-family:"JetBrains Mono","Maple Mono NF CN",ui-monospace,monospace;font-size:.9em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);padding:12px;border-radius:8px;overflow:auto}
+footer{color:var(--muted);font-size:13px;margin-top:48px}
+@media (max-width:900px){.layout{grid-template-columns:1fr}nav.toc{position:static;max-height:none}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc"><strong>目录</strong><div class="toc">
+<ul>
+<li><a href="#核心结论">核心结论</a></li>
+<li><a href="#今天就做的-top-5">今天就做的 Top 5</a></li>
+<li><a href="#投入与收益">投入与收益</a></li>
+<li><a href="#维度一终端呈现">维度一：终端呈现</a><ul>
+<li><a href="#终端选型">终端选型</a></li>
+<li><a href="#字体选型">字体选型</a></li>
+<li><a href="#claude-code-内置显示设置">Claude Code 内置显示设置</a></li>
+<li><a href="#diff-怎么看">Diff 怎么看</a></li>
+</ul>
+</li>
+<li><a href="#维度二输出结构结论先行">维度二：输出结构（结论先行）</a><ul>
+<li><a href="#该用哪个机制">该用哪个机制</a></li>
+<li><a href="#可复制的配置">可复制的配置</a></li>
+</ul>
+</li>
+<li><a href="#维度三html-产物">维度三：HTML 产物</a><ul>
+<li><a href="#什么场景值得用-html">什么场景值得用 HTML</a></li>
+<li><a href="#两条落地路线">两条落地路线</a></li>
+<li><a href="#markdown-折中方案">Markdown 折中方案</a></li>
+</ul>
+</li>
+<li><a href="#落地路线图">落地路线图</a></li>
+<li><a href="#待核实与注意事项">待核实与注意事项</a></li>
+<li><a href="#来源">来源</a></li>
+</ul>
+</div>
+</nav>
+<main>
+<h1 id="claude-code-review-提效调研终端呈现-结论先行-html-产物">Claude Code Review 提效调研：终端呈现 × 结论先行 × HTML 产物</h1>
+<blockquote>
+<p>三个维度怎么做、先做哪几件：结论先行的输出结构收益最大，其次是 HTML 产物，终端美化是基础。所有配置项已对照 2026-11 官方文档（code.claude.com/docs）核实；标注"未实测"的地方尚未在真实环境验证。</p>
+<p>调研日期：2026-11-14（UTC+8）。配置文件见仓库 <code>claude/</code> 与 <code>terminal/</code> 目录。</p>
+</blockquote>
+<h2 id="核心结论">核心结论</h2>
+<p><strong>一句话</strong>：Review 效率的瓶颈在"信息先后顺序"和"载体"，不在配色。先用 Output Style 把每条回复变成"结论 → 改动 → 风险 → 待决策"，再把长内容甩给 HTML，终端只看摘要和 diff。</p>
+<ol>
+<li><strong>结构维度收益最大，成本最低</strong>：自定义 Output Style（<code>~/.claude/output-styles/</code>，务必加 <code>keep-coding-instructions: true</code>）+ 精简的 <code>~/.claude/CLAUDE.md</code> 就能让结论先行成为默认；内置的 <code>Concise</code> 风格可以当零成本起点。</li>
+<li><strong>HTML 已经是 Anthropic Claude Code 团队自己在用的做法</strong>（Thariq Shihipar 2026-05 的文章）。官方 Artifacts 能把 HTML 发布成实时更新的 claude.ai 页面，但需要 claude.ai 账号登录；走公司 API Key 或网关时用本地单文件 HTML + 自动打开代替。</li>
+<li><strong>终端层面最值钱的是官方新功能</strong>：<code>tui: fullscreen</code> + <code>/diff</code> 侧边 diff 面板、<code>/focus</code> 精简视图、<code>maxProseWidth</code> 限制行宽。字体和主题属于一次配好的基础设施。</li>
+<li><strong>Android 背景的捷径</strong>：Claude Code 的 JetBrains 插件官方支持 Android Studio，可以把 Android Studio 降级成"diff 查看器 + 跳转"，主战场留在 Ghostty。</li>
+<li><strong>强制格式别靠 Stop hook 硬卡</strong>：官方定位是 Output Style 和 CLAUDE.md 只是"指令"，hook 才是"保证"；用 prompt 型 Stop hook 校验格式可行，但每轮多一次模型调用，放到长期再试。</li>
+</ol>
+<h2 id="今天就做的-top-5">今天就做的 Top 5</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>做什么</th>
+<th>耗时</th>
+<th>对应文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>升级并写入基础显示设置：<code>claude update</code>，在 <code>~/.claude/settings.json</code> 写入 <code>theme: auto</code>、<code>tui: fullscreen</code>、<code>maxProseWidth: 100</code>、<code>language</code>。diff 面板要求 v2.1.287+，<code>maxProseWidth</code> 要求 v2.1.282+</td>
+<td>5 分钟</td>
+<td><code>claude/settings.json</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>装上结论先行的 Output Style：存为 <code>~/.claude/output-styles/pyramid.md</code>，重启后 <code>/output-style Pyramid</code>。想先试水就用 <code>/output-style concise</code></td>
+<td>10 分钟</td>
+<td><code>claude/output-styles/pyramid.md</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>养成 <code>/diff</code> 与 <code>/focus</code> 的 review 姿势：终端 ≥110 列时 <code>/diff</code> 在对话旁开面板，可按轮次（T1、T2…）看改动，点 <code>ask</code> 把单文件 diff 带进下一问；<code>/focus</code> 只显示提问、工具调用一行摘要和最终回复</td>
+<td>0</td>
+<td><code>claude/settings.json</code>（<code>tui</code>）</td>
+</tr>
+<tr>
+<td>4</td>
+<td>换终端字体与行高：Ghostty + Maple Mono NF CN（中英 2:1 严格对齐）+ 行高加 15%，主题随系统亮暗切换</td>
+<td>15 分钟</td>
+<td><code>terminal/ghostty/config</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>长内容改走 HTML：装 <code>html-report</code> skill，并配上"写出 .html 就自动 open"的 PostToolUse hook</td>
+<td>10 分钟</td>
+<td><code>claude/skills/html-report/SKILL.md</code>、<code>claude/hooks/</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="投入与收益">投入与收益</h2>
+<p>位置是基于"整天在终端 review"这一前提的主观估计，不是测量结果。</p>
+<table>
+<thead>
+<tr>
+<th>象限</th>
+<th>措施</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>高收益、低投入（今天做）</td>
+<td>Pyramid 输出风格；<code>/diff</code> 面板 + <code>/focus</code>；HTML 报告 skill</td>
+</tr>
+<tr>
+<td>高收益、高投入（排期做）</td>
+<td>Artifacts 评论闭环；团队插件打包</td>
+</tr>
+<tr>
+<td>低收益、低投入（顺手做）</td>
+<td>字体与主题；Statusline；delta / difftastic</td>
+</tr>
+<tr>
+<td>低收益、高投入（暂缓）</td>
+<td>Stop hook 校验格式</td>
+</tr>
+</tbody>
+</table>
+<h2 id="维度一终端呈现">维度一：终端呈现</h2>
+<p>原则：终端负责"看摘要、看 diff、做决定"，不负责读长文。配色字体一次配好，真正提效的是官方的全屏渲染、diff 面板和视图模式。</p>
+<h3 id="终端选型">终端选型</h3>
+<table>
+<thead>
+<tr>
+<th>终端</th>
+<th>Shift+Enter</th>
+<th>完成通知</th>
+<th>评价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ghostty</td>
+<td>原生支持</td>
+<td>原生桌面通知</td>
+<td><strong>首选</strong>：快、原生、配置简单</td>
+</tr>
+<tr>
+<td>Kitty</td>
+<td>原生支持</td>
+<td>原生桌面通知</td>
+<td>功能强，配置偏重</td>
+</tr>
+<tr>
+<td>iTerm2</td>
+<td>原生支持</td>
+<td>需打开提醒设置</td>
+<td>稳；别用 <code>tmux -CC</code> 跑全屏模式</td>
+</tr>
+<tr>
+<td>WezTerm</td>
+<td>原生支持</td>
+<td>未列出，需 hook</td>
+<td>Lua 可编程，适合重度定制</td>
+</tr>
+<tr>
+<td>Warp</td>
+<td>原生支持</td>
+<td>需 hook 或 <code>terminal_bell</code></td>
+<td>块式 UI 与全屏 TUI 相性一般（经验判断，未实测）</td>
+</tr>
+<tr>
+<td>Android Studio 终端</td>
+<td>不支持</td>
+<td>无</td>
+<td>不建议当主终端</td>
+</tr>
+</tbody>
+</table>
+<p>Shift+Enter 与通知行为来自官方 terminal-config 页；Android Studio 终端里换行只能用 <code>Ctrl+J</code> 或 <code>\</code> 加回车。</p>
+<h3 id="字体选型">字体选型</h3>
+<table>
+<thead>
+<tr>
+<th>字体</th>
+<th>中英对齐</th>
+<th>适合</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Maple Mono NF CN</td>
+<td>严格 2:1</td>
+<td><strong>首选</strong>：自带中文、Nerd Font 图标、连字，Claude 状态符号有覆盖</td>
+</tr>
+<tr>
+<td>Sarasa Term SC（更纱黑体）</td>
+<td>严格 2:1</td>
+<td>偏窄、信息密度高，长期稳定</td>
+</tr>
+<tr>
+<td>JetBrains Mono + 系统中文回退</td>
+<td>不严格</td>
+<td>沿用 AS 习惯；中文会被缩放，表格可能错位</td>
+</tr>
+<tr>
+<td>霞鹜文楷等宽</td>
+<td>2:1</td>
+<td>阅读感好，适合看长文，写代码偏软</td>
+</tr>
+</tbody>
+</table>
+<p>配置：<a href="../terminal/ghostty/config"><code>terminal/ghostty/config</code></a>、<a href="../terminal/tmux/tmux.conf"><code>terminal/tmux/tmux.conf</code></a>。</p>
+<h3 id="claude-code-内置显示设置">Claude Code 内置显示设置</h3>
+<table>
+<thead>
+<tr>
+<th>设置 / 命令</th>
+<th>作用</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>theme</code></td>
+<td><code>auto</code> / <code>dark</code> / <code>light</code> / <code>*-daltonized</code> / <code>*-ansi</code> / <code>custom:&lt;slug&gt;</code></td>
+<td><code>auto</code> 跟随终端；色弱或想要更强 diff 对比用 daltonized</td>
+</tr>
+<tr>
+<td><code>~/.claude/themes/*.json</code></td>
+<td>自定义主题，可改 <code>diffAdded</code> 等 token，热加载</td>
+<td>调 diff 底色和词级高亮</td>
+</tr>
+<tr>
+<td><code>tui: fullscreen</code></td>
+<td>无闪烁全屏渲染，支持鼠标，长会话内存稳定</td>
+<td>开；diff 面板、<code>/focus</code> 都依赖它</td>
+</tr>
+<tr>
+<td><code>/diff</code></td>
+<td>侧边 diff 面板，按轮次看改动，<code>Ctrl+X B</code> 切换对比基准</td>
+<td>核心 review 入口</td>
+</tr>
+<tr>
+<td><code>/focus</code> 或 <code>viewMode</code></td>
+<td>只显示提问、工具一行摘要（含 diffstat）、最终回复</td>
+<td>日常开；排查问题时 <code>Ctrl+O</code> 展开</td>
+</tr>
+<tr>
+<td><code>Ctrl+O</code></td>
+<td>转录模式，<code>/</code> 搜索；按 <code>v</code> 在 <code>$EDITOR</code> 打开整段对话</td>
+<td>长回复用编辑器读</td>
+</tr>
+<tr>
+<td><code>maxProseWidth</code></td>
+<td>正文按 N 列换行，表格和代码块仍用满宽度</td>
+<td>80–100</td>
+</tr>
+<tr>
+<td><code>verbose</code></td>
+<td>工具输出全展开</td>
+<td>默认关，调试 hook/MCP 时开</td>
+</tr>
+<tr>
+<td><code>syntaxHighlightingDisabled</code></td>
+<td>关掉 diff 和代码块高亮</td>
+<td>保持默认 false</td>
+</tr>
+<tr>
+<td><code>language</code></td>
+<td>回复语言，原样传给模型</td>
+<td>如 <code>Simplified Chinese</code></td>
+</tr>
+<tr>
+<td><code>externalEditorContext</code></td>
+<td><code>Ctrl+G</code> 写 prompt 时把上条回复以注释带入编辑器</td>
+<td>边看边回复很好用；写在 <code>~/.claude.json</code></td>
+</tr>
+<tr>
+<td><code>statusLine</code></td>
+<td>底部状态栏脚本，stdin 收到 JSON</td>
+<td>显示上下文占比、5 小时额度、分支、当前风格</td>
+</tr>
+</tbody>
+</table>
+<p>配置：<a href="../claude/settings.json"><code>claude/settings.json</code></a>（其中的 hook 会在 Claude 写出任何 <code>.html</code> 后自动用浏览器打开，macOS <code>open</code>，依赖 <code>jq</code>）、<a href="../claude/themes/review.json"><code>claude/themes/review.json</code></a>、<a href="../claude/hooks/statusline.sh"><code>claude/hooks/statusline.sh</code></a>。</p>
+<h3 id="diff-怎么看">Diff 怎么看</h3>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>什么时候用</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/diff</code> 面板</td>
+<td>Claude 改动时边看边审</td>
+<td><strong>首选</strong>；按轮次过滤、单文件 ask</td>
+</tr>
+<tr>
+<td>Android Studio diff（<code>diffTool: auto</code>）</td>
+<td>改动大、要跳定义、看上下文</td>
+<td>JetBrains 插件支持 AS；外部终端里 <code>/ide</code> 连接</td>
+</tr>
+<tr>
+<td>delta</td>
+<td>你自己 <code>git diff</code> / <code>git add -p</code></td>
+<td>side-by-side、行号、语法高亮</td>
+</tr>
+<tr>
+<td>difftastic（<code>git dft</code>）</td>
+<td>重构、格式化混杂的改动</td>
+<td>按语法树比较，过滤缩进与换行噪音</td>
+</tr>
+<tr>
+<td><code>/code-review</code></td>
+<td>提交前自查</td>
+<td>内置 skill，<code>--fix</code> 直接改；<code>/security-review</code> 查安全</td>
+</tr>
+<tr>
+<td>HTML diff 报告</td>
+<td>要给别人看或改动跨很多文件</td>
+<td>diff2html 渲染 + 批注，见维度三</td>
+</tr>
+</tbody>
+</table>
+<p>配置：<a href="../claude/claude.json.example"><code>claude/claude.json.example</code></a>（<code>autoConnectIde</code>、<code>diffTool</code> 只认 <code>~/.claude.json</code>）、<a href="../terminal/git/gitconfig"><code>terminal/git/gitconfig</code></a>。</p>
+<p>注意：Claude Code 自己的 diff 渲染用的是主题里的 <code>diffAdded</code> 等 token，不走 delta；delta 和 difftastic 只影响你自己执行的 git 命令和 lazygit。</p>
+<h2 id="维度二输出结构结论先行">维度二：输出结构（结论先行）</h2>
+<p>思路：用 Output Style 管"怎么说"（每条回复都生效），CLAUDE.md 管"你是谁、项目事实"，skill 管"特定场景的固定格式"，hook 管"必须发生的事"。官方文档明确：Output Style 只是指令，不保证每次都执行。</p>
+<h3 id="该用哪个机制">该用哪个机制</h3>
+<table>
+<thead>
+<tr>
+<th>机制</th>
+<th>作用范围</th>
+<th>放什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Output Style</td>
+<td>主对话每条回复</td>
+<td>结论先行的回复骨架、书写规范</td>
+</tr>
+<tr>
+<td><code>~/.claude/CLAUDE.md</code></td>
+<td>所有项目常驻</td>
+<td>你的角色、沟通约定、HTML 存放约定</td>
+</tr>
+<tr>
+<td>项目 CLAUDE.md / <code>.claude/rules/</code></td>
+<td>单仓库；rules 可按 <code>paths</code> 限定</td>
+<td>构建命令、模块约定、Kotlin 规范</td>
+</tr>
+<tr>
+<td>Skill（<code>/report</code>、<code>/html-report</code>）</td>
+<td>调用时或任务匹配时加载</td>
+<td>长任务汇报格式、HTML 规范</td>
+</tr>
+<tr>
+<td>Hook</td>
+<td>生命周期事件，确定执行</td>
+<td>写完 HTML 自动打开、完成通知、格式校验</td>
+</tr>
+<tr>
+<td>Subagent</td>
+<td>独立上下文</td>
+<td>调研、review 等重任务，只回传摘要</td>
+</tr>
+<tr>
+<td><code>--append-system-prompt</code></td>
+<td>单次启动</td>
+<td>临时实验某种格式</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ <strong>三个容易踩的坑</strong>：自定义风格不写 <code>keep-coding-instructions: true</code> 会丢掉 Claude Code 内置的工程规范；<code>outputStyle</code> 的值大小写敏感，必须和 <code>name</code> 完全一致，否则回落到 Default；Output Style 不作用于普通 subagent（只作用于主对话和 fork），所以 CLAUDE.md 里也要留一句核心约定。</p>
+</blockquote>
+<p><strong>内置风格可直接用</strong></p>
+<ul>
+<li><code>Concise</code>：第一句给结果，去掉开场、过程叙述和结尾复述（v2.1.237+）</li>
+<li><code>Explanatory</code>：附 Insight 块解释为什么这么写，适合读不熟的模块</li>
+<li><code>Proactive</code>：少问常规问题，直接开干</li>
+</ul>
+<p><strong>内置风格的局限</strong>：没有固定的"风险 / 待决策"分节；不会自动判断什么时候改用 HTML；不了解你的 Android 验证命令。</p>
+<h3 id="可复制的配置">可复制的配置</h3>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>安装位置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../claude/output-styles/pyramid.md"><code>claude/output-styles/pyramid.md</code></a></td>
+<td><code>~/.claude/output-styles/pyramid.md</code></td>
+<td>存好后重启，<code>/output-style Pyramid</code> 或 settings 设 <code>"outputStyle": "Pyramid"</code></td>
+</tr>
+<tr>
+<td><a href="../claude/CLAUDE.md"><code>claude/CLAUDE.md</code></a></td>
+<td>合并进 <code>~/.claude/CLAUDE.md</code></td>
+<td>保持短，只放事实和硬约定；格式细节交给 Output Style</td>
+</tr>
+<tr>
+<td><a href="../claude/skills/report/SKILL.md"><code>claude/skills/report/SKILL.md</code></a></td>
+<td><code>~/.claude/skills/report/SKILL.md</code></td>
+<td>长任务结束时 <code>/report</code>；<code>!</code> 加反引号的命令会在加载时执行，把真实 diff stat 注入上下文</td>
+</tr>
+</tbody>
+</table>
+<h2 id="维度三html-产物">维度三：HTML 产物</h2>
+<p>Claude Code 团队的 Thariq Shihipar 公开说他几乎不再用 Markdown：超过 100 行的 Markdown 他自己都不读，HTML 能放表格、SVG 图、交互控件，更容易被人真正读完。代价是更多输出 token，以及你不方便手改。</p>
+<h3 id="什么场景值得用-html">什么场景值得用 HTML</h3>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>推荐载体</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>多文件改动的 code review</td>
+<td><strong>HTML</strong></td>
+<td>diff + 行旁批注 + 严重度着色 + 折叠</td>
+</tr>
+<tr>
+<td>方案对比 / 技术选型</td>
+<td><strong>HTML</strong></td>
+<td>对比表 + 每个方案一张图，推荐项高亮</td>
+</tr>
+<tr>
+<td>架构、数据流、时序讲解</td>
+<td><strong>HTML</strong></td>
+<td>SVG / Mermaid 图远胜 ASCII 图</td>
+</tr>
+<tr>
+<td>数据分析（性能、crash、耗时）</td>
+<td><strong>HTML</strong></td>
+<td>图表 + 可排序表格</td>
+</tr>
+<tr>
+<td>排序、分桶、调参类决策</td>
+<td><strong>HTML（交互）</strong></td>
+<td>拖拽或滑块，再"复制为 prompt"回传</td>
+</tr>
+<tr>
+<td>周报 / 给团队的进展同步</td>
+<td>HTML 或 Artifact</td>
+<td>链接一发即看，读完率高</td>
+</tr>
+<tr>
+<td>单次小改动的回复</td>
+<td>终端文本</td>
+<td>结论先行已经够用</td>
+</tr>
+<tr>
+<td>要进仓库、要人手改的文档</td>
+<td>Markdown</td>
+<td>README、ADR、CLAUDE.md、git diff 友好</td>
+</tr>
+<tr>
+<td>交给另一个 agent 的上下文</td>
+<td>Markdown</td>
+<td>token 省，模型读得一样好</td>
+</tr>
+</tbody>
+</table>
+<h3 id="两条落地路线">两条落地路线</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>官方 Artifacts</th>
+<th>本地单文件 HTML</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>怎么触发</td>
+<td>说"做成 artifact"或 Claude 自行判断</td>
+<td>说"做成 HTML"或 html-report skill</td>
+</tr>
+<tr>
+<td>查看</td>
+<td>自动开浏览器，<code>Ctrl+]</code> 重开，<code>/artifacts</code> 列表</td>
+<td><code>open</code> 文件；live-server 自动刷新</td>
+</tr>
+<tr>
+<td>更新</td>
+<td>同一 URL 原地更新，有版本</td>
+<td>覆盖文件，浏览器刷新</td>
+</tr>
+<tr>
+<td>分享与反馈</td>
+<td>可分享；同组织成员评论，Claude 可读评论并回复</td>
+<td>发文件或自己托管</td>
+</tr>
+<tr>
+<td>前提</td>
+<td>Pro/Max/Team/Enterprise + claude.ai 登录 + Anthropic API</td>
+<td>无</td>
+</tr>
+<tr>
+<td>不可用的情况</td>
+<td>API Key、网关、Bedrock/Vertex、<code>-p</code> 脚本模式、ZDR 组织</td>
+<td>无</td>
+</tr>
+<tr>
+<td>外部资源</td>
+<td>仅 Google Fonts 与 cdnjs、unpkg、jsDelivr 等 5 个 CDN</td>
+<td>随意，但建议同样只用这几个</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>ℹ️ <strong>建议</strong>：两条都走同一套 html-report 规范：只用内联 CSS 和 jsDelivr/cdnjs 的库，同一份 HTML 既能本地打开，也能直接发布成 Artifact。如果用的是公司 API Key 或代理网关，先默认走本地路线。</p>
+</blockquote>
+<ul>
+<li>Skill：<a href="../claude/skills/html-report/SKILL.md"><code>claude/skills/html-report/SKILL.md</code></a>（没有 <code>disable-model-invocation</code>，Claude 会在长输出时自己调用）</li>
+<li>常用 prompt：<a href="../prompts/html-prompts.md"><code>prompts/html-prompts.md</code></a></li>
+<li>本地预览：一次性看用 <code>open file.html</code>；反复迭代用 <code>npx live-server .claude-reports</code> 或 <code>browser-sync start --server .claude-reports --files "*.html"</code></li>
+<li>社区参考：u-ichi/reviewable-html-workbench（在 HTML 上批注再让 Claude 读批注修改）、sidzan/html-artifacts（21 套模板）、Thariq 的 20 个示例</li>
+</ul>
+<h3 id="markdown-折中方案">Markdown 折中方案</h3>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>形态</th>
+<th>适合</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>glow</td>
+<td>终端 TUI 阅读器</td>
+<td>不离开终端看 .md：<code>glow -p plan.md</code></td>
+</tr>
+<tr>
+<td>mdcat</td>
+<td>终端渲染输出</td>
+<td>Kitty/iTerm2 里可显示图片</td>
+</tr>
+<tr>
+<td>VS Code / Cursor 预览</td>
+<td>侧边实时预览</td>
+<td>装 Mermaid 预览扩展即可看图</td>
+</tr>
+<tr>
+<td>Typora</td>
+<td>所见即所得</td>
+<td>需要手改的长文档</td>
+</tr>
+<tr>
+<td>Obsidian</td>
+<td>知识库</td>
+<td>方案、调研沉淀成双链笔记</td>
+</tr>
+<tr>
+<td>Artifacts 发布 .md</td>
+<td>claude.ai 样式化页面</td>
+<td>官方支持 .md 源文件，带代码高亮</td>
+</tr>
+</tbody>
+</table>
+<h2 id="落地路线图">落地路线图</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>做什么</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>今天</td>
+<td>Top 5：设置、Pyramid 风格、/diff 与 /focus、字体、HTML skill + hook</td>
+<td>默认结论先行，长内容进浏览器</td>
+</tr>
+<tr>
+<td>一周内</td>
+<td>statusline；<code>/report</code> skill；delta + difftastic；自定义 diff 主题；tmux 配置；Android Studio <code>/ide</code> 联动</td>
+<td>review 姿势固定下来</td>
+</tr>
+<tr>
+<td>一周内</td>
+<td>用 Explanatory 风格读不熟的模块；对比 Pyramid 与 Concise 一周的体感</td>
+<td>确定个人默认风格</td>
+</tr>
+<tr>
+<td>长期</td>
+<td>把 Output Style + skills + hooks 打包成团队插件（插件可带 <code>output-styles/</code>），推给相机团队</td>
+<td>团队统一的汇报与 review 格式</td>
+</tr>
+<tr>
+<td>长期</td>
+<td>Artifacts 做进展看板和 review 评论闭环（若账号条件允许）</td>
+<td>评论直接驱动 Claude 修改</td>
+</tr>
+<tr>
+<td>长期</td>
+<td>试 prompt 型 Stop hook 校验"首句是否结论"；评估 Mods 做自定义面板</td>
+<td>格式从"建议"变成"保证"</td>
+</tr>
+</tbody>
+</table>
+<h2 id="待核实与注意事项">待核实与注意事项</h2>
+<ul>
+<li>版本号：diff 面板 v2.1.287+、<code>maxProseWidth</code> v2.1.282+、<code>Concise</code> v2.1.237+，以 <code>claude --version</code> 为准。</li>
+<li>Artifacts 依赖访问 <code>api.anthropic.com</code> 和 claude.ai 登录；国内网络、公司代理或 API Key 方式下大概率不可用，需要实测。</li>
+<li>Ghostty 主题名（如 Catppuccin Latte/Mocha）以 <code>ghostty +list-themes</code> 为准；Warp 与全屏 TUI 的兼容是经验判断，未见官方说明。</li>
+<li>Stop hook 校验格式：官方提供 <code>last_assistant_message</code> 和防循环的 <code>stop_hook_active</code>，但每轮多一次模型调用、增加延迟，未实测成本。</li>
+<li><code>language</code> 的值原样传给模型，不做校验；写 <code>Simplified Chinese</code> 或 <code>简体中文</code> 都可以，未对比效果差异。</li>
+<li>自动打开 HTML 的 hook 每次 Write 都会开新标签页；频繁迭代时换成 live-server。</li>
+</ul>
+<h2 id="来源">来源</h2>
+<ul>
+<li>Output styles（官方）：https://code.claude.com/docs/en/output-styles</li>
+<li>Configure your terminal（主题、tmux、自定义主题 token）：https://code.claude.com/docs/en/terminal-config</li>
+<li>Fullscreen rendering（/focus、转录模式、diff 面板）：https://code.claude.com/docs/en/fullscreen</li>
+<li>Interactive mode：Review changes with /diff：https://code.claude.com/docs/en/interactive-mode</li>
+<li>Settings reference（maxProseWidth、viewMode、diffTool 等）：https://code.claude.com/docs/en/settings-reference</li>
+<li>Status line：https://code.claude.com/docs/en/statusline</li>
+<li>Share session output as artifacts：https://code.claude.com/docs/en/artifacts</li>
+<li>Hooks guide（prompt 型 Stop hook）：https://code.claude.com/docs/en/hooks-guide</li>
+<li>Memory：CLAUDE.md 与 .claude/rules：https://code.claude.com/docs/en/memory</li>
+<li>Skills（frontmatter、!命令注入）：https://code.claude.com/docs/en/skills</li>
+<li>JetBrains IDEs（含 Android Studio）：https://code.claude.com/docs/en/jetbrains</li>
+<li>The unreasonable effectiveness of HTML（claude.dev，2026-05-20）：https://claude.dev/blog/using-claude-code-the-unreasonable-effectiveness-of-html/</li>
+<li>HTML 示例集（20 个单文件）：https://thariqs.github.io/html-effectiveness/</li>
+<li>HTML is the new Markdown（How I AI 访谈）：https://www.lennysnewsletter.com/p/how-i-ai-html-is-the-new-markdown</li>
+<li>sidzan/html-artifacts：https://github.com/sidzan/html-artifacts</li>
+<li>u-ichi/reviewable-html-workbench：https://github.com/u-ichi/reviewable-html-workbench</li>
+<li>Maple Mono 中文说明：https://github.com/subframe7536/maple-font/blob/variable/README_CN.md</li>
+<li>Ghostty 配置参考：https://ghostty.org/docs/config/reference</li>
+</ul>
+<footer>由 scripts/build-html.py 从 docs/research-report.md 生成；改内容请改 Markdown 再重新生成。</footer>
+</main>
+</div>
+</body>
+</html>

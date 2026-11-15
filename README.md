@@ -54,7 +54,7 @@ python3 scripts/install-review-kit.py --apply
 ├── terminal/
 │   ├── ghostty/config              # Ghostty：Maple Mono NF CN、行高、亮/暗主题
 │   ├── tmux/tmux.conf              # tmux：官方推荐 4 行 + 鼠标
-│   └── git/gitconfig               # delta + difftastic（git dft）
+│   └── git/gitconfig               # difftastic（git dft）+ zdiff3
 ├── prompts/html-prompts.md         # 常用 HTML 产物 prompt（相机业务示例）
 └── scripts/build-html.py           # 从 Markdown 重新生成 HTML 报告
 ```
@@ -83,7 +83,7 @@ python3 scripts/install-review-kit.py --apply
    ```
    自动打开 HTML 的钩子已经内联在 [claude/settings.json](claude/settings.json) 的 `hooks` 段里，依赖 `jq`，打开用的是 macOS 的 `open`。如果想用脚本方式注册，就改用 [claude/hooks/hooks.open-html.json](claude/hooks/hooks.open-html.json) 和 [claude/hooks/open-html.sh](claude/hooks/open-html.sh)，两种方式选一种。之后遇到长回复，直接说"做成 HTML"；prompt 示例见 [prompts/html-prompts.md](prompts/html-prompts.md)。
 
-一周内可以接着做：`/report` 汇报 skill、状态栏、[delta + difftastic](terminal/git/gitconfig)、[自定义 diff 主题](claude/themes/review.json)，以及 Android Studio 联动（[claude/claude.json.example](claude/claude.json.example)，在外部终端执行 `/ide`）。长期计划见报告里的"落地路线图"。
+一周内可以接着做：`/report` 汇报 skill、状态栏、[difftastic（git dft）](terminal/git/gitconfig)、[自定义 diff 主题](claude/themes/review.json)，以及 Android Studio 联动（[claude/claude.json.example](claude/claude.json.example)，在外部终端执行 `/ide`）。长期计划见报告里的"落地路线图"。
 
 ## 待确认事项（未实测）
 

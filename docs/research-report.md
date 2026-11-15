@@ -44,7 +44,7 @@
 |---|---|
 | 高收益、低投入（今天做） | Pyramid 输出风格；`/diff` 面板 + `/focus`；HTML 报告 skill |
 | 高收益、高投入（排期做） | Artifacts 评论闭环；团队插件打包 |
-| 低收益、低投入（顺手做） | 字体与主题；Statusline；delta / difftastic |
+| 低收益、低投入（顺手做） | 字体与主题；Statusline；difftastic |
 | 低收益、高投入（暂缓） | Stop hook 校验格式 |
 
 ## 维度一：终端呈现
@@ -100,14 +100,13 @@ Shift+Enter 与通知行为来自官方 terminal-config 页；Android Studio 终
 |---|---|---|
 | `/diff` 面板 | Claude 改动时边看边审 | **首选**；按轮次过滤、单文件 ask |
 | Android Studio diff（`diffTool: auto`） | 改动大、要跳定义、看上下文 | JetBrains 插件支持 AS；外部终端里 `/ide` 连接 |
-| delta | 你自己 `git diff` / `git add -p` | side-by-side、行号、语法高亮 |
 | difftastic（`git dft`） | 重构、格式化混杂的改动 | 按语法树比较，过滤缩进与换行噪音 |
 | `/code-review` | 提交前自查 | 内置 skill，`--fix` 直接改；`/security-review` 查安全 |
 | HTML diff 报告 | 要给别人看或改动跨很多文件 | diff2html 渲染 + 批注，见维度三 |
 
 配置：[`claude/claude.json.example`](../claude/claude.json.example)（`autoConnectIde`、`diffTool` 只认 `~/.claude.json`）、[`terminal/git/gitconfig`](../terminal/git/gitconfig)。
 
-注意：Claude Code 自己的 diff 渲染用的是主题里的 `diffAdded` 等 token，不走 delta；delta 和 difftastic 只影响你自己执行的 git 命令和 lazygit。
+注意：Claude Code 自己的 diff 渲染用的是主题里的 `diffAdded` 等 token；difftastic 只影响你自己执行的 `git dft`。
 
 ## 维度二：输出结构（结论先行）
 
@@ -196,7 +195,7 @@ Claude Code 团队的 Thariq Shihipar 公开说他几乎不再用 Markdown：超
 | 阶段 | 做什么 | 产出 |
 |---|---|---|
 | 今天 | Top 5：设置、Pyramid 风格、/diff 与 /focus、字体、HTML skill + hook | 默认结论先行，长内容进浏览器 |
-| 一周内 | statusline；`/report` skill；delta + difftastic；自定义 diff 主题；tmux 配置；Android Studio `/ide` 联动 | review 姿势固定下来 |
+| 一周内 | statusline；`/report` skill；difftastic；自定义 diff 主题；tmux 配置；Android Studio `/ide` 联动 | review 姿势固定下来 |
 | 一周内 | 用 Explanatory 风格读不熟的模块；对比 Pyramid 与 Concise 一周的体感 | 确定个人默认风格 |
 | 长期 | 把 Output Style + skills + hooks 打包成团队插件（插件可带 `output-styles/`），推给相机团队 | 团队统一的汇报与 review 格式 |
 | 长期 | Artifacts 做进展看板和 review 评论闭环（若账号条件允许） | 评论直接驱动 Claude 修改 |

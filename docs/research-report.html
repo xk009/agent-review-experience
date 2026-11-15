@@ -141,7 +141,7 @@ footer{color:var(--muted);font-size:13px;margin-top:48px}
 </tr>
 <tr>
 <td>低收益、低投入（顺手做）</td>
-<td>字体与主题；Statusline；delta / difftastic</td>
+<td>字体与主题；Statusline；difftastic</td>
 </tr>
 <tr>
 <td>低收益、高投入（暂缓）</td>
@@ -328,11 +328,6 @@ footer{color:var(--muted);font-size:13px;margin-top:48px}
 <td>JetBrains 插件支持 AS；外部终端里 <code>/ide</code> 连接</td>
 </tr>
 <tr>
-<td>delta</td>
-<td>你自己 <code>git diff</code> / <code>git add -p</code></td>
-<td>side-by-side、行号、语法高亮</td>
-</tr>
-<tr>
 <td>difftastic（<code>git dft</code>）</td>
 <td>重构、格式化混杂的改动</td>
 <td>按语法树比较，过滤缩进与换行噪音</td>
@@ -350,7 +345,7 @@ footer{color:var(--muted);font-size:13px;margin-top:48px}
 </tbody>
 </table>
 <p>配置：<a href="../claude/claude.json.example"><code>claude/claude.json.example</code></a>（<code>autoConnectIde</code>、<code>diffTool</code> 只认 <code>~/.claude.json</code>）、<a href="../terminal/git/gitconfig"><code>terminal/git/gitconfig</code></a>。</p>
-<p>注意：Claude Code 自己的 diff 渲染用的是主题里的 <code>diffAdded</code> 等 token，不走 delta；delta 和 difftastic 只影响你自己执行的 git 命令和 lazygit。</p>
+<p>注意：Claude Code 自己的 diff 渲染用的是主题里的 <code>diffAdded</code> 等 token；difftastic 只影响你自己执行的 <code>git dft</code>。</p>
 <h2 id="维度二输出结构结论先行">维度二：输出结构（结论先行）</h2>
 <p>思路：用 Output Style 管"怎么说"（每条回复都生效），CLAUDE.md 管"你是谁、项目事实"，skill 管"特定场景的固定格式"，hook 管"必须发生的事"。官方文档明确：Output Style 只是指令，不保证每次都执行。</p>
 <h3 id="该用哪个机制">该用哪个机制</h3>
@@ -611,7 +606,7 @@ footer{color:var(--muted);font-size:13px;margin-top:48px}
 </tr>
 <tr>
 <td>一周内</td>
-<td>statusline；<code>/report</code> skill；delta + difftastic；自定义 diff 主题；tmux 配置；Android Studio <code>/ide</code> 联动</td>
+<td>statusline；<code>/report</code> skill；difftastic；自定义 diff 主题；tmux 配置；Android Studio <code>/ide</code> 联动</td>
 <td>review 姿势固定下来</td>
 </tr>
 <tr>

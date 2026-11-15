@@ -1,13 +1,5 @@
-# ~/.gitconfig —— 你自己看 git diff / lazygit 时用
-# 注意：Claude Code 自己的 diff 渲染走主题 token（见 claude/themes/review.json），不走 delta
-[core]
-    pager = delta
-[interactive]
-    diffFilter = delta --color-only
-[delta]
-    navigate = true
-    side-by-side = true
-    line-numbers = true
+# ~/.gitconfig —— 你自己在终端执行 git diff 时用
+# 注意：Claude Code 自己的 diff 渲染走主题 token（见 claude/themes/review.json），不受这里影响
 [merge]
     conflictstyle = zdiff3
 [alias]

@@ -2,9 +2,11 @@
 
 提升 review AI 编码代理（当前主要是终端里的 Claude Code）输出的体验和效率。这个主题的所有产物都放在这里：调研文档、prompt、配置、终端设置，以后还有小工具。
 
-**核心观点**：review 效率卡在"信息的先后顺序"和"用什么载体呈现"，配色不是瓶颈。先让每条回复结论先行（结论 → 关键改动 → 风险 → 需要你决策的点），长内容转成 HTML，终端里只看摘要和 diff。
+**核心目标**：在保持交付质量的前提下，减少人形成可靠判断所需的主动时间。围绕验收标准组织变化，用可追溯证据支持结论，按风险分配审阅注意力；终端摘要、Diff 与 HTML 服务于同一条审阅路径。
 
-完整调研：[docs/research-report.md](docs/research-report.md)（另有单文件 HTML 版 [docs/research-report.html](docs/research-report.html)，clone 后用浏览器打开）。
+方法总览：[系统性提升 Agent 产物 Review 效率与体验](docs/review-system.md)（验收、风险分流、六个维度、跨产物证据与持续改进）。
+
+终端与呈现专项调研：[docs/research-report.md](docs/research-report.md)（另有单文件 HTML 版 [docs/research-report.html](docs/research-report.html)，clone 后用浏览器打开）。
 
 ## 审阅闭环：本次新增的轻量入口
 
